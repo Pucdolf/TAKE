@@ -21,4 +21,26 @@ public class TicketController {
     public Ticket addTicket(@RequestBody Ticket ticket) {
         return ticketRepository.save(ticket);
     }
+
+    @PutMapping("/{id}")
+    public Ticket updateTicket(@PathVariable Long id, @RequestBody Ticket updatedTicket) {
+        return ticketRepository.findById(id).map(ticket -> {
+            ticket.setFlight(updatedTicket.getFlight());
+            ticket.setPassenger(updatedTicket.getPassenger());
+            ticket.setSeatClass(updatedTicket.getSeatClass());
+            ticket.setSeatNumber(updatedTicket.getSeatNumber());
+            ticket.setBasePrice(updatedTicket.getBasePrice());
+            return ticketRepository.save(ticket);
+        }).orElseThrow(() -> new RuntimeException("Nie znaleziono biletu o ID: " + id));
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteTicket(@PathVariable Long id) {
+        ticketRepository.deleteById(id);
+    }
+
+    @PutMapping("/flight/{flightId}/dynamic-pricing")
+    public void applyDynamicPricing(@PathVariable Long flightId) {
+        ticketRepository.updateTicketPricesForFlight(flightId);
+    }
 }
