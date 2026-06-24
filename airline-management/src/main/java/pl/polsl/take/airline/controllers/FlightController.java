@@ -1,11 +1,16 @@
 package pl.polsl.take.airline.controllers;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Flight;
 import pl.polsl.take.airline.repositories.FlightRepository;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @RestController
 @RequestMapping("/flights")
@@ -15,8 +20,24 @@ public class FlightController {
     private FlightRepository flightRepository;
 
     @GetMapping
-    public Iterable<Flight> getAllFlights() {
-        return flightRepository.findAll();
+    public CollectionModel<EntityModel<Flight>> getAllFlights() {
+        List<EntityModel<Flight>> flights = StreamSupport.stream(flightRepository.findAll().spliterator(), false)
+                .map(flight -> EntityModel.of(flight,
+                        linkTo(methodOn(FlightController.class).getFlightById(flight.getId())).withSelfRel(),
+                        linkTo(methodOn(FlightController.class).getAllFlights()).withRel("flights")))
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(flights, linkTo(methodOn(FlightController.class).getAllFlights()).withSelfRel());
+    }
+
+    @GetMapping("/{id}")
+    public EntityModel<Flight> getFlightById(@PathVariable Long id) {
+        Flight flight = flightRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Nie znaleziono lotu o ID: " + id));
+
+        return EntityModel.of(flight,
+                linkTo(methodOn(FlightController.class).getFlightById(id)).withSelfRel(),
+                linkTo(methodOn(FlightController.class).getAllFlights()).withRel("all-flights"));
     }
 
     @PostMapping
@@ -41,6 +62,9 @@ public class FlightController {
 
     @DeleteMapping("/{id}")
     public void deleteFlight(@PathVariable Long id) {
+        if (!flightRepository.existsById(id)) {
+            throw new RuntimeException("Nie można usunąć. Lot o ID: " + id + " nie istnieje.");
+        }
         flightRepository.deleteById(id);
     }
 
