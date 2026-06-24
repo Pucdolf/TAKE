@@ -15,8 +15,6 @@ public class FlightStatus {
     @Column(nullable = false, length = 20, unique = true)
     private String code;
 
-    @Column(nullable = false, length = 100)
-    private String name;
 
     @Column(length = 100)
     private String description;

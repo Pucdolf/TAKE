@@ -25,7 +25,7 @@ public class Ticket {
     @Column(name = "seat_class", nullable = false, length = 20)
     private String seatClass;
 
-    @Column(name = "seat_number", nullable = false, length = 10)
+    @Column(name = "seat_number", length = 10)
     private String seatNumber;
 
     @Column(name = "base_price", nullable = false, precision = 10, scale = 2)

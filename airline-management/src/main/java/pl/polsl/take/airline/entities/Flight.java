@@ -32,9 +32,7 @@ public class Flight {
     @JoinColumn(name = "status_id", nullable = false)
     private FlightStatus status;
 
-    @ManyToOne
-    @JoinColumn(name = "pilot_id", nullable = false)
-    private Employee pilot;
+
 
     @Column(name = "departure_time", nullable = false)
     private LocalDateTime departureTime;
