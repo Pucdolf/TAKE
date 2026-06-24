@@ -2,12 +2,11 @@ package pl.polsl.take.airline.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
-import org.springframework.hateoas.EntityModel;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Ticket;
 import pl.polsl.take.airline.repositories.TicketRepository;
-
+import pl.polsl.take.airline.dto.TicketDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,58 +14,47 @@ import java.util.stream.StreamSupport;
 @RestController
 @RequestMapping("/tickets")
 public class TicketController {
+    @Autowired private TicketRepository repository;
 
-    @Autowired
-    private TicketRepository ticketRepository;
+    public TicketDTO convertToDto(Ticket entity) {
+        TicketDTO dto = new TicketDTO(entity);
+        dto.add(linkTo(methodOn(TicketController.class).getTicketById(entity.getId())).withSelfRel());
+        dto.add(linkTo(methodOn(TicketController.class).getAllTickets()).withRel("tickets"));
+        if (entity.getFlight() != null) dto.add(linkTo(methodOn(FlightController.class).getFlightById(entity.getFlight().getId())).withRel("flight"));
+        if (entity.getPassenger() != null) dto.add(linkTo(methodOn(PassengerController.class).getPassengerById(entity.getPassenger().getId())).withRel("passenger"));
+        return dto;
+    }
 
     @GetMapping
-    public CollectionModel<EntityModel<Ticket>> getAllTickets() {
-        List<EntityModel<Ticket>> tickets = StreamSupport.stream(ticketRepository.findAll().spliterator(), false)
-                .map(ticket -> EntityModel.of(ticket,
-                        linkTo(methodOn(TicketController.class).getTicketById(ticket.getId())).withSelfRel(),
-                        linkTo(methodOn(TicketController.class).getAllTickets()).withRel("tickets")))
-                .collect(Collectors.toList());
-
-        return CollectionModel.of(tickets, linkTo(methodOn(TicketController.class).getAllTickets()).withSelfRel());
+    public CollectionModel<TicketDTO> getAllTickets() {
+        List<TicketDTO> dtos = StreamSupport.stream(repository.findAll().spliterator(), false)
+                .map(this::convertToDto).collect(Collectors.toList());
+        return CollectionModel.of(dtos, linkTo(methodOn(TicketController.class).getAllTickets()).withSelfRel());
     }
 
     @GetMapping("/{id}")
-    public EntityModel<Ticket> getTicketById(@PathVariable Long id) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Nie znaleziono biletu o ID: " + id));
-
-        return EntityModel.of(ticket,
-                linkTo(methodOn(TicketController.class).getTicketById(id)).withSelfRel(),
-                linkTo(methodOn(TicketController.class).getAllTickets()).withRel("all-tickets"));
+    public TicketDTO getTicketById(@PathVariable Long id) {
+        return convertToDto(repository.findById(id).orElseThrow(() -> new RuntimeException("Brak ID: " + id)));
     }
 
     @PostMapping
-    public Ticket addTicket(@RequestBody Ticket ticket) {
-        return ticketRepository.save(ticket);
+    public TicketDTO addTicket(@RequestBody Ticket entity) {
+        return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public Ticket updateTicket(@PathVariable Long id, @RequestBody Ticket updatedTicket) {
-        return ticketRepository.findById(id).map(ticket -> {
-            ticket.setFlight(updatedTicket.getFlight());
-            ticket.setPassenger(updatedTicket.getPassenger());
-            ticket.setSeatClass(updatedTicket.getSeatClass());
-            ticket.setSeatNumber(updatedTicket.getSeatNumber());
-            ticket.setBasePrice(updatedTicket.getBasePrice());
-            return ticketRepository.save(ticket);
-        }).orElseThrow(() -> new RuntimeException("Nie znaleziono biletu o ID: " + id));
+    public TicketDTO updateTicket(@PathVariable Long id, @RequestBody Ticket updated) {
+        return repository.findById(id).map(entity -> {
+            entity.setSeatClass(updated.getSeatClass());
+            entity.setSeatNumber(updated.getSeatNumber());
+            entity.setBasePrice(updated.getBasePrice());
+            return convertToDto(repository.save(entity));
+        }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }
 
     @DeleteMapping("/{id}")
     public void deleteTicket(@PathVariable Long id) {
-        if (!ticketRepository.existsById(id)) {
-            throw new RuntimeException("Nie można usunąć. Bilet o ID: " + id + " nie istnieje.");
-        }
-        ticketRepository.deleteById(id);
-    }
-    
-    @PutMapping("/flight/{flightId}/dynamic-pricing")
-    public void applyDynamicPricing(@PathVariable Long flightId) {
-        ticketRepository.updateTicketPricesForFlight(flightId);
+        if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
+        repository.deleteById(id);
     }
 }

@@ -2,12 +2,11 @@ package pl.polsl.take.airline.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
-import org.springframework.hateoas.EntityModel;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Employee;
 import pl.polsl.take.airline.repositories.EmployeeRepository;
-
+import pl.polsl.take.airline.dto.EmployeeDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,53 +14,47 @@ import java.util.stream.StreamSupport;
 @RestController
 @RequestMapping("/employees")
 public class EmployeeController {
+    @Autowired private EmployeeRepository repository;
 
-    @Autowired
-    private EmployeeRepository employeeRepository;
+    private EmployeeDTO convertToDto(Employee entity) {
+        EmployeeDTO dto = new EmployeeDTO(entity);
+        dto.add(linkTo(methodOn(EmployeeController.class).getEmployeeById(entity.getId())).withSelfRel());
+        dto.add(linkTo(methodOn(EmployeeController.class).getAllEmployees()).withRel("employees"));
+        return dto;
+    }
 
     @GetMapping
-    public CollectionModel<EntityModel<Employee>> getAllEmployees() {
-        List<EntityModel<Employee>> employees = StreamSupport.stream(employeeRepository.findAll().spliterator(), false)
-                .map(employee -> EntityModel.of(employee,
-                        linkTo(methodOn(EmployeeController.class).getEmployeeById(employee.getId())).withSelfRel(),
-                        linkTo(methodOn(EmployeeController.class).getAllEmployees()).withRel("employees")))
-                .collect(Collectors.toList());
-
-        return CollectionModel.of(employees, linkTo(methodOn(EmployeeController.class).getAllEmployees()).withSelfRel());
+    public CollectionModel<EmployeeDTO> getAllEmployees() {
+        List<EmployeeDTO> dtos = StreamSupport.stream(repository.findAll().spliterator(), false)
+                .map(this::convertToDto).collect(Collectors.toList());
+        return CollectionModel.of(dtos, linkTo(methodOn(EmployeeController.class).getAllEmployees()).withSelfRel());
     }
 
     @GetMapping("/{id}")
-    public EntityModel<Employee> getEmployeeById(@PathVariable Long id) {
-        Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Nie znaleziono pracownika o ID: " + id));
-
-        return EntityModel.of(employee,
-                linkTo(methodOn(EmployeeController.class).getEmployeeById(id)).withSelfRel(),
-                linkTo(methodOn(EmployeeController.class).getAllEmployees()).withRel("all-employees"));
+    public EmployeeDTO getEmployeeById(@PathVariable Long id) {
+        return convertToDto(repository.findById(id).orElseThrow(() -> new RuntimeException("Brak ID: " + id)));
     }
 
     @PostMapping
-    public Employee addEmployee(@RequestBody Employee employee) {
-        return employeeRepository.save(employee);
+    public EmployeeDTO addEmployee(@RequestBody Employee entity) {
+        return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public Employee updateEmployee(@PathVariable Long id, @RequestBody Employee updatedEmployee) {
-        return employeeRepository.findById(id).map(employee -> {
-            employee.setFirstName(updatedEmployee.getFirstName());
-            employee.setLastName(updatedEmployee.getLastName());
-            employee.setEmail(updatedEmployee.getEmail());
-            employee.setJobTitle(updatedEmployee.getJobTitle());
-            employee.setLicenseNumber(updatedEmployee.getLicenseNumber());
-            return employeeRepository.save(employee);
-        }).orElseThrow(() -> new RuntimeException("Nie znaleziono pracownika o ID: " + id));
+    public EmployeeDTO updateEmployee(@PathVariable Long id, @RequestBody Employee updated) {
+        return repository.findById(id).map(entity -> {
+            entity.setFirstName(updated.getFirstName());
+            entity.setLastName(updated.getLastName());
+            entity.setEmail(updated.getEmail());
+            entity.setJobTitle(updated.getJobTitle());
+            entity.setLicenseNumber(updated.getLicenseNumber());
+            return convertToDto(repository.save(entity));
+        }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }
 
     @DeleteMapping("/{id}")
     public void deleteEmployee(@PathVariable Long id) {
-        if (!employeeRepository.existsById(id)) {
-            throw new RuntimeException("Nie można usunąć. Pracownik o ID: " + id + " nie istnieje.");
-        }
-        employeeRepository.deleteById(id);
+        if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
+        repository.deleteById(id);
     }
 }

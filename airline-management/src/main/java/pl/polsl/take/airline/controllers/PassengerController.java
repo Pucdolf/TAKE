@@ -2,12 +2,11 @@ package pl.polsl.take.airline.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
-import org.springframework.hateoas.EntityModel;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Passenger;
 import pl.polsl.take.airline.repositories.PassengerRepository;
-
+import pl.polsl.take.airline.dto.PassengerDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,57 +14,46 @@ import java.util.stream.StreamSupport;
 @RestController
 @RequestMapping("/passengers")
 public class PassengerController {
+    @Autowired private PassengerRepository repository;
 
-    @Autowired
-    private PassengerRepository passengerRepository;
+    public PassengerDTO convertToDto(Passenger entity) {
+        PassengerDTO dto = new PassengerDTO(entity);
+        dto.add(linkTo(methodOn(PassengerController.class).getPassengerById(entity.getId())).withSelfRel());
+        dto.add(linkTo(methodOn(PassengerController.class).getAllPassengers()).withRel("passengers"));
+        return dto;
+    }
 
     @GetMapping
-    public CollectionModel<EntityModel<Passenger>> getAllPassengers() {
-        List<EntityModel<Passenger>> passengers = StreamSupport.stream(passengerRepository.findAll().spliterator(), false)
-                .map(passenger -> EntityModel.of(passenger,
-                        linkTo(methodOn(PassengerController.class).getPassengerById(passenger.getId())).withSelfRel(),
-                        linkTo(methodOn(PassengerController.class).getAllPassengers()).withRel("passengers")))
-                .collect(Collectors.toList());
-
-        return CollectionModel.of(passengers, linkTo(methodOn(PassengerController.class).getAllPassengers()).withSelfRel());
+    public CollectionModel<PassengerDTO> getAllPassengers() {
+        List<PassengerDTO> dtos = StreamSupport.stream(repository.findAll().spliterator(), false)
+                .map(this::convertToDto).collect(Collectors.toList());
+        return CollectionModel.of(dtos, linkTo(methodOn(PassengerController.class).getAllPassengers()).withSelfRel());
     }
 
     @GetMapping("/{id}")
-    public EntityModel<Passenger> getPassengerById(@PathVariable Long id) {
-        Passenger passenger = passengerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Nie znaleziono pasażera o ID: " + id));
-
-        return EntityModel.of(passenger,
-                linkTo(methodOn(PassengerController.class).getPassengerById(id)).withSelfRel(),
-                linkTo(methodOn(PassengerController.class).getAllPassengers()).withRel("all-passengers"));
+    public PassengerDTO getPassengerById(@PathVariable Long id) {
+        return convertToDto(repository.findById(id).orElseThrow(() -> new RuntimeException("Brak ID: " + id)));
     }
 
     @PostMapping
-    public Passenger addPassenger(@RequestBody Passenger passenger) {
-        return passengerRepository.save(passenger);
+    public PassengerDTO addPassenger(@RequestBody Passenger entity) {
+        return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public Passenger updatePassenger(@PathVariable Long id, @RequestBody Passenger updatedPassenger) {
-        return passengerRepository.findById(id).map(passenger -> {
-            passenger.setFirstName(updatedPassenger.getFirstName());
-            passenger.setLastName(updatedPassenger.getLastName());
-            passenger.setEmail(updatedPassenger.getEmail());
-            passenger.setPassportNumber(updatedPassenger.getPassportNumber());
-            return passengerRepository.save(passenger);
-        }).orElseThrow(() -> new RuntimeException("Nie znaleziono pasażera o ID: " + id));
+    public PassengerDTO updatePassenger(@PathVariable Long id, @RequestBody Passenger updated) {
+        return repository.findById(id).map(entity -> {
+            entity.setFirstName(updated.getFirstName());
+            entity.setLastName(updated.getLastName());
+            entity.setEmail(updated.getEmail());
+            entity.setPassportNumber(updated.getPassportNumber());
+            return convertToDto(repository.save(entity));
+        }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }
 
     @DeleteMapping("/{id}")
     public void deletePassenger(@PathVariable Long id) {
-        if (!passengerRepository.existsById(id)) {
-            throw new RuntimeException("Nie można usunąć. Pasażer o ID: " + id + " nie istnieje.");
-        }
-        passengerRepository.deleteById(id);
-    }
-
-    @GetMapping("/vips")
-    public Iterable<pl.polsl.take.airline.repositories.VipPassengerReport> getVipPassengers() {
-        return passengerRepository.findVipPassengers();
+        if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
+        repository.deleteById(id);
     }
 }

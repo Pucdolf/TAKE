@@ -2,12 +2,11 @@ package pl.polsl.take.airline.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
-import org.springframework.hateoas.EntityModel;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.FlightStatus;
 import pl.polsl.take.airline.repositories.FlightStatusRepository;
-
+import pl.polsl.take.airline.dto.FlightStatusDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,51 +14,44 @@ import java.util.stream.StreamSupport;
 @RestController
 @RequestMapping("/flight-statuses")
 public class FlightStatusController {
+    @Autowired private FlightStatusRepository repository;
 
-    @Autowired
-    private FlightStatusRepository flightStatusRepository;
+    public FlightStatusDTO convertToDto(FlightStatus entity) {
+        FlightStatusDTO dto = new FlightStatusDTO(entity);
+        dto.add(linkTo(methodOn(FlightStatusController.class).getFlightStatusById(entity.getId())).withSelfRel());
+        dto.add(linkTo(methodOn(FlightStatusController.class).getAllFlightStatuses()).withRel("flight-statuses"));
+        return dto;
+    }
 
     @GetMapping
-    public CollectionModel<EntityModel<FlightStatus>> getAllStatuses() {
-        List<EntityModel<FlightStatus>> statuses = StreamSupport.stream(flightStatusRepository.findAll().spliterator(), false)
-                .map(status -> EntityModel.of(status,
-                        linkTo(methodOn(FlightStatusController.class).getStatusById(status.getId())).withSelfRel(),
-                        linkTo(methodOn(FlightStatusController.class).getAllStatuses()).withRel("flight-statuses")))
-                .collect(Collectors.toList());
-
-        return CollectionModel.of(statuses, linkTo(methodOn(FlightStatusController.class).getAllStatuses()).withSelfRel());
+    public CollectionModel<FlightStatusDTO> getAllFlightStatuses() {
+        List<FlightStatusDTO> dtos = StreamSupport.stream(repository.findAll().spliterator(), false)
+                .map(this::convertToDto).collect(Collectors.toList());
+        return CollectionModel.of(dtos, linkTo(methodOn(FlightStatusController.class).getAllFlightStatuses()).withSelfRel());
     }
 
     @GetMapping("/{id}")
-    public EntityModel<FlightStatus> getStatusById(@PathVariable Long id) {
-        FlightStatus status = flightStatusRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Nie znaleziono statusu lotu o ID: " + id));
-
-        return EntityModel.of(status,
-                linkTo(methodOn(FlightStatusController.class).getStatusById(id)).withSelfRel(),
-                linkTo(methodOn(FlightStatusController.class).getAllStatuses()).withRel("all-flight-statuses"));
+    public FlightStatusDTO getFlightStatusById(@PathVariable Long id) {
+        return convertToDto(repository.findById(id).orElseThrow(() -> new RuntimeException("Brak ID: " + id)));
     }
 
     @PostMapping
-    public FlightStatus addStatus(@RequestBody FlightStatus status) {
-        return flightStatusRepository.save(status);
+    public FlightStatusDTO addFlightStatus(@RequestBody FlightStatus entity) {
+        return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public FlightStatus updateStatus(@PathVariable Long id, @RequestBody FlightStatus updatedStatus) {
-        return flightStatusRepository.findById(id).map(status -> {
-            status.setCode(updatedStatus.getCode());
-            status.setName(updatedStatus.getName());
-            status.setDescription(updatedStatus.getDescription());
-            return flightStatusRepository.save(status);
-        }).orElseThrow(() -> new RuntimeException("Nie znaleziono statusu lotu o ID: " + id));
+    public FlightStatusDTO updateFlightStatus(@PathVariable Long id, @RequestBody FlightStatus updated) {
+        return repository.findById(id).map(entity -> {
+            entity.setCode(updated.getCode());
+            entity.setDescription(updated.getDescription());
+            return convertToDto(repository.save(entity));
+        }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }
 
     @DeleteMapping("/{id}")
-    public void deleteStatus(@PathVariable Long id) {
-        if (!flightStatusRepository.existsById(id)) {
-            throw new RuntimeException("Nie można usunąć. Status lotu o ID: " + id + " nie istnieje.");
-        }
-        flightStatusRepository.deleteById(id);
+    public void deleteFlightStatus(@PathVariable Long id) {
+        if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
+        repository.deleteById(id);
     }
 }

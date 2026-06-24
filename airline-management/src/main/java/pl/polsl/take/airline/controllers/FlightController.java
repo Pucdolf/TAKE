@@ -2,12 +2,11 @@ package pl.polsl.take.airline.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
-import org.springframework.hateoas.EntityModel;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Flight;
 import pl.polsl.take.airline.repositories.FlightRepository;
-
+import pl.polsl.take.airline.dto.FlightDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,76 +14,73 @@ import java.util.stream.StreamSupport;
 @RestController
 @RequestMapping("/flights")
 public class FlightController {
+    @Autowired private FlightRepository repository;
 
-    @Autowired
-    private FlightRepository flightRepository;
+    public FlightDTO convertToDto(Flight entity) {
+        FlightDTO dto = new FlightDTO(entity);
+        dto.add(linkTo(methodOn(FlightController.class).getFlightById(entity.getId())).withSelfRel());
+        dto.add(linkTo(methodOn(FlightController.class).getAllFlights()).withRel("flights"));
+        if(entity.getOriginAirport() != null) dto.add(linkTo(methodOn(AirportController.class).getAirportById(entity.getOriginAirport().getId())).withRel("originAirport"));
+        if(entity.getDestinationAirport() != null) dto.add(linkTo(methodOn(AirportController.class).getAirportById(entity.getDestinationAirport().getId())).withRel("destinationAirport"));
+        if(entity.getAirplane() != null) dto.add(linkTo(methodOn(AirplaneController.class).getAirplaneById(entity.getAirplane().getId())).withRel("airplane"));
+        if(entity.getStatus() != null) dto.add(linkTo(methodOn(FlightStatusController.class).getFlightStatusById(entity.getStatus().getId())).withRel("status"));
+        return dto;
+    }
 
     @GetMapping
-    public CollectionModel<EntityModel<Flight>> getAllFlights() {
-        List<EntityModel<Flight>> flights = StreamSupport.stream(flightRepository.findAll().spliterator(), false)
-                .map(flight -> EntityModel.of(flight,
-                        linkTo(methodOn(FlightController.class).getFlightById(flight.getId())).withSelfRel(),
-                        linkTo(methodOn(FlightController.class).getAllFlights()).withRel("flights")))
-                .collect(Collectors.toList());
-
-        return CollectionModel.of(flights, linkTo(methodOn(FlightController.class).getAllFlights()).withSelfRel());
+    public CollectionModel<FlightDTO> getAllFlights() {
+        List<FlightDTO> dtos = StreamSupport.stream(repository.findAll().spliterator(), false)
+                .map(this::convertToDto).collect(Collectors.toList());
+        return CollectionModel.of(dtos, linkTo(methodOn(FlightController.class).getAllFlights()).withSelfRel());
     }
 
     @GetMapping("/{id}")
-    public EntityModel<Flight> getFlightById(@PathVariable Long id) {
-        Flight flight = flightRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Nie znaleziono lotu o ID: " + id));
-
-        return EntityModel.of(flight,
-                linkTo(methodOn(FlightController.class).getFlightById(id)).withSelfRel(),
-                linkTo(methodOn(FlightController.class).getAllFlights()).withRel("all-flights"));
+    public FlightDTO getFlightById(@PathVariable Long id) {
+        return convertToDto(repository.findById(id).orElseThrow(() -> new RuntimeException("Brak ID: " + id)));
     }
 
     @PostMapping
-    public Flight addFlight(@RequestBody Flight flight) {
-        return flightRepository.save(flight);
+    public FlightDTO addFlight(@RequestBody Flight entity) {
+        return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public Flight updateFlight(@PathVariable Long id, @RequestBody Flight updatedFlight) {
-        return flightRepository.findById(id).map(flight -> {
-            flight.setFlightNumber(updatedFlight.getFlightNumber());
-            flight.setOriginAirport(updatedFlight.getOriginAirport());
-            flight.setDestinationAirport(updatedFlight.getDestinationAirport());
-            flight.setAirplane(updatedFlight.getAirplane());
-            flight.setStatus(updatedFlight.getStatus());
-            flight.setPilot(updatedFlight.getPilot());
-            flight.setDepartureTime(updatedFlight.getDepartureTime());
-            flight.setArrivalTime(updatedFlight.getArrivalTime());
-            return flightRepository.save(flight);
-        }).orElseThrow(() -> new RuntimeException("Nie znaleziono lotu o ID: " + id));
+    public FlightDTO updateFlight(@PathVariable Long id, @RequestBody Flight updated) {
+        return repository.findById(id).map(entity -> {
+            entity.setFlightNumber(updated.getFlightNumber());
+            entity.setOriginAirport(updated.getOriginAirport());
+            entity.setDestinationAirport(updated.getDestinationAirport());
+            entity.setAirplane(updated.getAirplane());
+            entity.setStatus(updated.getStatus());
+            entity.setDepartureTime(updated.getDepartureTime());
+            entity.setArrivalTime(updated.getArrivalTime());
+            return convertToDto(repository.save(entity));
+        }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }
 
     @DeleteMapping("/{id}")
     public void deleteFlight(@PathVariable Long id) {
-        if (!flightRepository.existsById(id)) {
-            throw new RuntimeException("Nie można usunąć. Lot o ID: " + id + " nie istnieje.");
-        }
-        flightRepository.deleteById(id);
+        if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
+        repository.deleteById(id);
     }
 
     @GetMapping("/reports/finance")
     public List<pl.polsl.take.airline.repositories.FlightFinanceReport> getFinanceReport() {
-        return flightRepository.getFinanceReport();
+        return repository.getFinanceReport();
     }
 
     @GetMapping("/reports/load-factor")
     public List<pl.polsl.take.airline.repositories.FlightLoadFactorReport> getHighLoadFlights() {
-        return flightRepository.getHighLoadFlights();
+        return repository.getHighLoadFlights();
     }
 
     @PutMapping("/cancel-from/{iataCode}")
     public void cancelFlightsFromAirport(@PathVariable String iataCode) {
-        flightRepository.cancelFlightsFromAirport(iataCode);
+        repository.cancelFlightsFromAirport(iataCode);
     }
 
     @PutMapping("/swap-airplane")
     public void swapAirplane(@RequestParam Long oldId, @RequestParam Long newId) {
-        flightRepository.swapAirplane(oldId, newId);
+        repository.swapAirplane(oldId, newId);
     }
 }
