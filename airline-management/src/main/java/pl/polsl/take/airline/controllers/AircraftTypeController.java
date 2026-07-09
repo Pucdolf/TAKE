@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.AircraftType;
 import pl.polsl.take.airline.repositories.AircraftTypeRepository;
 import pl.polsl.take.airline.dto.AircraftTypeDTO;
+import pl.polsl.take.airline.dto.AircraftTypeRequestDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,8 +16,7 @@ import java.util.stream.StreamSupport;
 @RequestMapping("/aircraft-types")
 public class AircraftTypeController {
 
-    @Autowired
-    private AircraftTypeRepository repository;
+    @Autowired private AircraftTypeRepository repository;
 
     private AircraftTypeDTO convertToDto(AircraftType entity) {
         AircraftTypeDTO dto = new AircraftTypeDTO(entity);
@@ -34,27 +34,29 @@ public class AircraftTypeController {
 
     @GetMapping("/{id}")
     public AircraftTypeDTO getAircraftTypeById(@PathVariable Long id) {
-        AircraftType entity = repository.findById(id).orElseThrow(() -> new RuntimeException("Nie znaleziono typu o ID: " + id));
-        return convertToDto(entity);
+        return convertToDto(repository.findById(id).orElseThrow(() -> new RuntimeException("Brak ID: " + id)));
     }
 
     @PostMapping
-    public AircraftTypeDTO addAircraftType(@RequestBody AircraftType entity) {
+    public AircraftTypeDTO addAircraftType(@RequestBody AircraftTypeRequestDTO req) {
+        AircraftType entity = new AircraftType();
+        entity.setName(req.getName());
+        entity.setDescription(req.getDescription());
         return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public AircraftTypeDTO updateAircraftType(@PathVariable Long id, @RequestBody AircraftType updated) {
+    public AircraftTypeDTO updateAircraftType(@PathVariable Long id, @RequestBody AircraftTypeRequestDTO req) {
         return repository.findById(id).map(entity -> {
-            entity.setName(updated.getName());
-            entity.setDescription(updated.getDescription());
+            entity.setName(req.getName());
+            entity.setDescription(req.getDescription());
             return convertToDto(repository.save(entity));
-        }).orElseThrow(() -> new RuntimeException("Nie znaleziono typu o ID: " + id));
+        }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }
 
     @DeleteMapping("/{id}")
     public void deleteAircraftType(@PathVariable Long id) {
-        if (!repository.existsById(id)) throw new RuntimeException("Nie znaleziono: " + id);
+        if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
         repository.deleteById(id);
     }
 }

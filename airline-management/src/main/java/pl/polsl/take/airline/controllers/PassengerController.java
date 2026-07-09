@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Passenger;
 import pl.polsl.take.airline.repositories.PassengerRepository;
 import pl.polsl.take.airline.dto.PassengerDTO;
+import pl.polsl.take.airline.dto.PassengerRequestDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -36,17 +37,22 @@ public class PassengerController {
     }
 
     @PostMapping
-    public PassengerDTO addPassenger(@RequestBody Passenger entity) {
+    public PassengerDTO addPassenger(@RequestBody PassengerRequestDTO req) {
+        Passenger entity = new Passenger();
+        entity.setFirstName(req.getFirstName());
+        entity.setLastName(req.getLastName());
+        entity.setEmail(req.getEmail());
+        entity.setPassportNumber(req.getPassportNumber());
         return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public PassengerDTO updatePassenger(@PathVariable Long id, @RequestBody Passenger updated) {
+    public PassengerDTO updatePassenger(@PathVariable Long id, @RequestBody PassengerRequestDTO req) {
         return repository.findById(id).map(entity -> {
-            entity.setFirstName(updated.getFirstName());
-            entity.setLastName(updated.getLastName());
-            entity.setEmail(updated.getEmail());
-            entity.setPassportNumber(updated.getPassportNumber());
+            entity.setFirstName(req.getFirstName());
+            entity.setLastName(req.getLastName());
+            entity.setEmail(req.getEmail());
+            entity.setPassportNumber(req.getPassportNumber());
             return convertToDto(repository.save(entity));
         }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }

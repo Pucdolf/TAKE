@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.FlightStatus;
 import pl.polsl.take.airline.repositories.FlightStatusRepository;
 import pl.polsl.take.airline.dto.FlightStatusDTO;
+import pl.polsl.take.airline.dto.FlightStatusRequestDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -16,7 +17,7 @@ import java.util.stream.StreamSupport;
 public class FlightStatusController {
     @Autowired private FlightStatusRepository repository;
 
-    public FlightStatusDTO convertToDto(FlightStatus entity) {
+    private FlightStatusDTO convertToDto(FlightStatus entity) {
         FlightStatusDTO dto = new FlightStatusDTO(entity);
         dto.add(linkTo(methodOn(FlightStatusController.class).getFlightStatusById(entity.getId())).withSelfRel());
         dto.add(linkTo(methodOn(FlightStatusController.class).getAllFlightStatuses()).withRel("flight-statuses"));
@@ -36,15 +37,18 @@ public class FlightStatusController {
     }
 
     @PostMapping
-    public FlightStatusDTO addFlightStatus(@RequestBody FlightStatus entity) {
+    public FlightStatusDTO addFlightStatus(@RequestBody FlightStatusRequestDTO req) {
+        FlightStatus entity = new FlightStatus();
+        entity.setCode(req.getCode());
+        entity.setDescription(req.getDescription());
         return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public FlightStatusDTO updateFlightStatus(@PathVariable Long id, @RequestBody FlightStatus updated) {
+    public FlightStatusDTO updateFlightStatus(@PathVariable Long id, @RequestBody FlightStatusRequestDTO req) {
         return repository.findById(id).map(entity -> {
-            entity.setCode(updated.getCode());
-            entity.setDescription(updated.getDescription());
+            entity.setCode(req.getCode());
+            entity.setDescription(req.getDescription());
             return convertToDto(repository.save(entity));
         }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }

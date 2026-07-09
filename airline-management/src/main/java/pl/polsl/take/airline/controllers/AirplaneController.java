@@ -5,8 +5,11 @@ import org.springframework.hateoas.CollectionModel;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Airplane;
+import pl.polsl.take.airline.entities.AircraftType;
 import pl.polsl.take.airline.repositories.AirplaneRepository;
+import pl.polsl.take.airline.repositories.AircraftTypeRepository;
 import pl.polsl.take.airline.dto.AirplaneDTO;
+import pl.polsl.take.airline.dto.AirplaneRequestDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,6 +18,7 @@ import java.util.stream.StreamSupport;
 @RequestMapping("/airplanes")
 public class AirplaneController {
     @Autowired private AirplaneRepository repository;
+    @Autowired private AircraftTypeRepository aircraftTypeRepository;
 
     public AirplaneDTO convertToDto(Airplane entity) {
         AirplaneDTO dto = new AirplaneDTO(entity);
@@ -39,17 +43,30 @@ public class AirplaneController {
     }
 
     @PostMapping
-    public AirplaneDTO addAirplane(@RequestBody Airplane entity) {
+    public AirplaneDTO addAirplane(@RequestBody AirplaneRequestDTO req) {
+        Airplane entity = new Airplane();
+        entity.setModel(req.getModel());
+        entity.setRegistrationNumber(req.getRegistrationNumber());
+        entity.setCapacity(req.getCapacity());
+        if (req.getTypeId() != null) {
+            AircraftType type = aircraftTypeRepository.findById(req.getTypeId()).orElseThrow(() -> new RuntimeException("Brak Type ID"));
+            entity.setType(type);
+        }
         return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public AirplaneDTO updateAirplane(@PathVariable Long id, @RequestBody Airplane updated) {
+    public AirplaneDTO updateAirplane(@PathVariable Long id, @RequestBody AirplaneRequestDTO req) {
         return repository.findById(id).map(entity -> {
-            entity.setModel(updated.getModel());
-            entity.setRegistrationNumber(updated.getRegistrationNumber());
-            entity.setCapacity(updated.getCapacity());
-            entity.setType(updated.getType());
+            entity.setModel(req.getModel());
+            entity.setRegistrationNumber(req.getRegistrationNumber());
+            entity.setCapacity(req.getCapacity());
+            if (req.getTypeId() != null) {
+                AircraftType type = aircraftTypeRepository.findById(req.getTypeId()).orElseThrow(() -> new RuntimeException("Brak Type ID"));
+                entity.setType(type);
+            } else {
+                entity.setType(null);
+            }
             return convertToDto(repository.save(entity));
         }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }

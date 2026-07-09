@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Employee;
 import pl.polsl.take.airline.repositories.EmployeeRepository;
 import pl.polsl.take.airline.dto.EmployeeDTO;
+import pl.polsl.take.airline.dto.EmployeeRequestDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -36,18 +37,24 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public EmployeeDTO addEmployee(@RequestBody Employee entity) {
+    public EmployeeDTO addEmployee(@RequestBody EmployeeRequestDTO req) {
+        Employee entity = new Employee();
+        entity.setFirstName(req.getFirstName());
+        entity.setLastName(req.getLastName());
+        entity.setEmail(req.getEmail());
+        entity.setJobTitle(req.getJobTitle());
+        entity.setLicenseNumber(req.getLicenseNumber());
         return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public EmployeeDTO updateEmployee(@PathVariable Long id, @RequestBody Employee updated) {
+    public EmployeeDTO updateEmployee(@PathVariable Long id, @RequestBody EmployeeRequestDTO req) {
         return repository.findById(id).map(entity -> {
-            entity.setFirstName(updated.getFirstName());
-            entity.setLastName(updated.getLastName());
-            entity.setEmail(updated.getEmail());
-            entity.setJobTitle(updated.getJobTitle());
-            entity.setLicenseNumber(updated.getLicenseNumber());
+            entity.setFirstName(req.getFirstName());
+            entity.setLastName(req.getLastName());
+            entity.setEmail(req.getEmail());
+            entity.setJobTitle(req.getJobTitle());
+            entity.setLicenseNumber(req.getLicenseNumber());
             return convertToDto(repository.save(entity));
         }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }

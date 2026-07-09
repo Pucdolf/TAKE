@@ -5,8 +5,11 @@ import org.springframework.hateoas.CollectionModel;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Airport;
+import pl.polsl.take.airline.entities.Country;
 import pl.polsl.take.airline.repositories.AirportRepository;
+import pl.polsl.take.airline.repositories.CountryRepository;
 import pl.polsl.take.airline.dto.AirportDTO;
+import pl.polsl.take.airline.dto.AirportRequestDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,13 +18,14 @@ import java.util.stream.StreamSupport;
 @RequestMapping("/airports")
 public class AirportController {
     @Autowired private AirportRepository repository;
+    @Autowired private CountryRepository countryRepository;
 
     public AirportDTO convertToDto(Airport entity) {
         AirportDTO dto = new AirportDTO(entity);
         dto.add(linkTo(methodOn(AirportController.class).getAirportById(entity.getId())).withSelfRel());
         dto.add(linkTo(methodOn(AirportController.class).getAllAirports()).withRel("airports"));
-        if(entity.getCountry() != null) {
-             dto.add(linkTo(methodOn(CountryController.class).getCountryById(entity.getCountry().getId())).withRel("country"));
+        if (entity.getCountry() != null) {
+            dto.add(linkTo(methodOn(CountryController.class).getCountryById(entity.getCountry().getId())).withRel("country"));
         }
         return dto;
     }
@@ -39,17 +43,30 @@ public class AirportController {
     }
 
     @PostMapping
-    public AirportDTO addAirport(@RequestBody Airport entity) {
+    public AirportDTO addAirport(@RequestBody AirportRequestDTO req) {
+        Airport entity = new Airport();
+        entity.setIataCode(req.getIataCode());
+        entity.setName(req.getName());
+        entity.setCity(req.getCity());
+        if (req.getCountryId() != null) {
+            Country country = countryRepository.findById(req.getCountryId()).orElseThrow(() -> new RuntimeException("Brak Country ID"));
+            entity.setCountry(country);
+        }
         return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public AirportDTO updateAirport(@PathVariable Long id, @RequestBody Airport updated) {
+    public AirportDTO updateAirport(@PathVariable Long id, @RequestBody AirportRequestDTO req) {
         return repository.findById(id).map(entity -> {
-            entity.setIataCode(updated.getIataCode());
-            entity.setName(updated.getName());
-            entity.setCity(updated.getCity());
-            entity.setCountry(updated.getCountry());
+            entity.setIataCode(req.getIataCode());
+            entity.setName(req.getName());
+            entity.setCity(req.getCity());
+            if (req.getCountryId() != null) {
+                Country country = countryRepository.findById(req.getCountryId()).orElseThrow(() -> new RuntimeException("Brak Country ID"));
+                entity.setCountry(country);
+            } else {
+                entity.setCountry(null);
+            }
             return convertToDto(repository.save(entity));
         }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }

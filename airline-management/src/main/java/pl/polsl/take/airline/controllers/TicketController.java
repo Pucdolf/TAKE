@@ -6,7 +6,10 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 import org.springframework.web.bind.annotation.*;
 import pl.polsl.take.airline.entities.Ticket;
 import pl.polsl.take.airline.repositories.TicketRepository;
+import pl.polsl.take.airline.repositories.FlightRepository;
+import pl.polsl.take.airline.repositories.PassengerRepository;
 import pl.polsl.take.airline.dto.TicketDTO;
+import pl.polsl.take.airline.dto.TicketRequestDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -15,6 +18,8 @@ import java.util.stream.StreamSupport;
 @RequestMapping("/tickets")
 public class TicketController {
     @Autowired private TicketRepository repository;
+    @Autowired private FlightRepository flightRepository;
+    @Autowired private PassengerRepository passengerRepository;
 
     public TicketDTO convertToDto(Ticket entity) {
         TicketDTO dto = new TicketDTO(entity);
@@ -38,16 +43,30 @@ public class TicketController {
     }
 
     @PostMapping
-    public TicketDTO addTicket(@RequestBody Ticket entity) {
+    public TicketDTO addTicket(@RequestBody TicketRequestDTO req) {
+        Ticket entity = new Ticket();
+        entity.setSeatClass(req.getSeatClass());
+        entity.setSeatNumber(req.getSeatNumber());
+        entity.setBasePrice(req.getBasePrice());
+        entity.setBookingTime(req.getBookingTime());
+        
+        if (req.getFlightId() != null) entity.setFlight(flightRepository.findById(req.getFlightId()).orElseThrow(() -> new RuntimeException("Brak Flight ID")));
+        if (req.getPassengerId() != null) entity.setPassenger(passengerRepository.findById(req.getPassengerId()).orElseThrow(() -> new RuntimeException("Brak Passenger ID")));
+        
         return convertToDto(repository.save(entity));
     }
 
     @PutMapping("/{id}")
-    public TicketDTO updateTicket(@PathVariable Long id, @RequestBody Ticket updated) {
+    public TicketDTO updateTicket(@PathVariable Long id, @RequestBody TicketRequestDTO req) {
         return repository.findById(id).map(entity -> {
-            entity.setSeatClass(updated.getSeatClass());
-            entity.setSeatNumber(updated.getSeatNumber());
-            entity.setBasePrice(updated.getBasePrice());
+            entity.setSeatClass(req.getSeatClass());
+            entity.setSeatNumber(req.getSeatNumber());
+            entity.setBasePrice(req.getBasePrice());
+            entity.setBookingTime(req.getBookingTime());
+            
+            if (req.getFlightId() != null) entity.setFlight(flightRepository.findById(req.getFlightId()).orElseThrow(() -> new RuntimeException("Brak Flight ID")));
+            if (req.getPassengerId() != null) entity.setPassenger(passengerRepository.findById(req.getPassengerId()).orElseThrow(() -> new RuntimeException("Brak Passenger ID")));
+            
             return convertToDto(repository.save(entity));
         }).orElseThrow(() -> new RuntimeException("Brak ID: " + id));
     }
