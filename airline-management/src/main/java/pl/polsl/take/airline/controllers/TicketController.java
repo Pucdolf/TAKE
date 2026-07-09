@@ -76,4 +76,9 @@ public class TicketController {
         if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
         repository.deleteById(id);
     }
+
+    @PutMapping("/flight/{flightId}/dynamic-pricing")
+    public void updateTicketPricesForFlight(@PathVariable Long flightId) {
+        repository.updateTicketPricesForFlight(flightId);
+    }
 }

@@ -62,4 +62,9 @@ public class PassengerController {
         if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
         repository.deleteById(id);
     }
+
+    @GetMapping("/vips")
+    public Iterable<pl.polsl.take.airline.repositories.VipPassengerReport> getVipPassengers() {
+        return repository.findVipPassengers();
+    }
 }

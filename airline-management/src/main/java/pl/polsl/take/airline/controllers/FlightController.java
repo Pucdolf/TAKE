@@ -82,4 +82,24 @@ public class FlightController {
         if (!repository.existsById(id)) throw new RuntimeException("Brak ID: " + id);
         repository.deleteById(id);
     }
+
+    @GetMapping("/financial-reports")
+    public Iterable<pl.polsl.take.airline.repositories.FlightFinanceReport> getFinanceReport() {
+        return repository.getFinanceReport();
+    }
+
+    @GetMapping("/occupancy")
+    public Iterable<pl.polsl.take.airline.repositories.FlightLoadFactorReport> getHighLoadFlights() {
+        return repository.getHighLoadFlights();
+    }
+
+    @PutMapping("/cancel-by-airport/{airportCode}")
+    public void cancelFlightsFromAirport(@PathVariable String airportCode) {
+        repository.cancelFlightsFromAirport(airportCode);
+    }
+
+    @PutMapping("/replace-airplane")
+    public void swapAirplane(@RequestParam Long oldAirplaneId, @RequestParam Long newAirplaneId) {
+        repository.swapAirplane(oldAirplaneId, newAirplaneId);
+    }
 }
