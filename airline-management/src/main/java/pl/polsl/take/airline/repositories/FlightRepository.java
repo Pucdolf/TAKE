@@ -43,7 +43,7 @@ public interface FlightRepository extends CrudRepository<Flight, Long> {
     @Modifying
     @Transactional
     @Query(value = "UPDATE flights " +
-                   "SET status_id = (SELECT id FROM flight_statuses WHERE code = 'CANCELLED') " +
+                   "SET status_id = (SELECT id FROM flight_statuses WHERE code = 'CAN') " +
                    "WHERE origin_airport_id = (SELECT id FROM airports WHERE iata_code = :iataCode) " +
                    "AND departure_time > CURRENT_TIMESTAMP", nativeQuery = true)
     void cancelFlightsFromAirport(String iataCode);

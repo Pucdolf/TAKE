@@ -36,16 +36,16 @@ INSERT INTO employees (first_name, last_name, email, job_title, license_number) 
 
 -- Loty
 -- Lot 1 (ID 1): Z WAW do BER (Standardowy lot testowy)
-INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, airplane_id, status_id, departure_time, arrival_time) VALUES ('LO385', 1, 2, 1, 1, '2026-07-01 10:00:00', '2026-07-01 11:30:00');
+INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, airplane_id, status_id, departure_time, arrival_time) VALUES ('LO385', 1, 2, 1, 1, '2026-12-01 10:00:00', '2026-12-01 11:30:00');
 
 -- Lot 2 (ID 2): Z WAW do LHR (Do testu masowego odwoływania)
-INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, airplane_id, status_id, departure_time, arrival_time) VALUES ('LO281', 1, 3, 2, 1, '2026-07-01 12:00:00', '2026-07-01 14:00:00');
+INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, airplane_id, status_id, departure_time, arrival_time) VALUES ('LO281', 1, 3, 2, 1, '2026-12-01 12:00:00', '2026-12-01 14:00:00');
 
 -- Lot 3 (ID 3): Z BER do FCO (W 4 miejscowej Cessnie)
-INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, airplane_id, status_id, departure_time, arrival_time) VALUES ('VIP01', 2, 4, 3, 1, '2026-07-02 08:00:00', '2026-07-02 10:00:00');
+INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, airplane_id, status_id, departure_time, arrival_time) VALUES ('VIP01', 2, 4, 3, 1, '2026-12-02 08:00:00', '2026-12-02 10:00:00');
 
 -- Lot 4 (ID 4): Z LHR do FCO (W ultralekkim 2-miejscowym samolocie Diamond DA40)
-INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, airplane_id, status_id, departure_time, arrival_time) VALUES ('TAXI2', 3, 4, 5, 1, '2026-07-05 16:00:00', '2026-07-05 18:30:00');
+INSERT INTO flights (flight_number, origin_airport_id, destination_airport_id, airplane_id, status_id, departure_time, arrival_time) VALUES ('TAXI2', 3, 4, 5, 1, '2026-12-05 16:00:00', '2026-12-05 18:30:00');
 
 -- Pasażerowie
 INSERT INTO passengers (first_name, last_name, email, passport_number) VALUES ('Michal', 'Zieliński', 'michal.z@example.com', 'PASS12345');
